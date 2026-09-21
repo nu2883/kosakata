@@ -4,8 +4,9 @@ const SCOPE = '/kosakata/';
 const PRECACHE_URLS = [
   '/kosakata/',
   '/kosakata/index.html',
-  '/kosakata/kuisKosakata.html',
   '/kosakata/manifest-kuis.json',
+  '/kosakata/icon-192.png',
+  '/kosakata/icon-512.png',
 ];
 
 self.addEventListener('install', event => {
