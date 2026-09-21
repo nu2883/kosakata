@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Kuis Kosakata">
+  <meta name="theme-color" content="#92610a">
+  <link rel="manifest" href="manifest-kuis.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="only light">
+  <title>Kuis Kosakata Arab</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    html, body { height:100%; margin:0; padding:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial; overflow:hidden; }
+    body.light { background:linear-gradient(180deg,#f4e2a3 0%,#f9f1d1 40%,#fdf9e6 100%); color:#2c2a24; }
+    body.dark  { background:#071029; color:#e6eef8; }
+
+    #app { height:100vh; display:flex; flex-direction:column; position:relative; }
+
+    .topbar { position:fixed; top:0; right:0; z-index:60; display:flex; gap:8px; padding:12px 14px; }
+    .icon-btn {
+      width:38px; height:38px; border-radius:11px;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(120,80,0,0.10); font-size:1.05rem; flex-shrink:0; cursor:pointer;
+      border:none; transition:opacity .4s ease;
+    }
+    body.dark .icon-btn { background:rgba(255,255,255,0.10); }
+
+    /* ---- Kartu utama ---- */
+    .flash-wrap {
+      flex:1; width:100%; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; text-align:center;
+      padding:60px 22px 100px; cursor:pointer; box-sizing:border-box;
+    }
+    .flash-arab {
+      font-family:'Amiri',serif; direction:rtl; text-align:center;
+      font-size:3.6rem; line-height:1.4; word-break:break-word; max-width:100%;
+    }
+    .flash-hint { margin-top:24px; font-size:0.82rem; opacity:0.4; font-weight:600; }
+    .flash-back { width:100%; display:flex; flex-direction:column; align-items:center; gap:12px; }
+    .flash-latin { font-size:1rem; opacity:0.55; font-style:italic; }
+    .flash-divider { width:40px; height:2px; background:rgba(120,80,0,0.2); border-radius:2px; margin:4px 0; }
+    body.dark .flash-divider { background:rgba(255,255,255,0.15); }
+    .flash-arti { font-size:1.7rem; font-weight:700; }
+    .flash-kedudukan { font-size:0.85rem; opacity:0.6; max-width:320px; }
+
+    /* Bar aksi mengambang di bawah — hanya tampil saat kartu dibalik (lihat v-if) */
+    .flash-actions {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      max-width: 600px;
+      padding: 0 16px;
+      box-sizing: border-box;
+    }
+    .flash-mini-btn {
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: none;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: rgba(120, 80, 0, 0.08);
+      color: inherit;
+    }
+    body.dark .flash-mini-btn { background:rgba(255,255,255,0.08); }
+    .flash-sulit { background:rgba(184,89,10,0.12); color:#b8590a; }
+    .flash-hafal { background:rgba(47,107,79,0.12); color:#2f6b4f; }
+    body.dark .flash-sulit { background:rgba(224,140,80,0.16); color:#e08c50; }
+    body.dark .flash-hafal { background:rgba(96,196,155,0.16); color:#60c49b; }
+    .flash-shuffle { margin-top:8px; font-size:0.8rem; font-weight:600; opacity:0.5; background:none; border:none; cursor:pointer; color:inherit; }
+
+    .empty-icon { font-size:2.6rem; margin-bottom:14px; }
+    .empty-title { font-weight:700; font-size:1.15rem; margin-bottom:6px; }
+    .empty-sub { font-size:0.88rem; opacity:0.65; line-height:1.5; max-width:300px; }
+
+    /* ---- Modal pengaturan ---- */
+    .settings-backdrop {
+      position:fixed; inset:0; background:rgba(20,14,4,0.45); z-index:100;
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .settings-panel {
+      width:100%; max-width:380px; max-height:85vh; overflow-y:auto;
+      background:#fffdf6; border-radius:18px; padding:20px; box-sizing:border-box;
+      box-shadow:0 20px 50px rgba(0,0,0,0.25);
+    }
+    body.dark .settings-panel { background:#0b1220; }
+    .settings-title { font-size:1.05rem; font-weight:700; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+    .settings-label { font-size:0.75rem; font-weight:700; opacity:0.55; letter-spacing:0.02em; margin:16px 0 8px; }
+    .chip-row { display:flex; gap:8px; flex-wrap:wrap; }
+    .chip {
+      padding:9px 14px; border-radius:999px; font-size:0.82rem; font-weight:600;
+      background:rgba(120,80,0,0.08); cursor:pointer;
+    }
+    body.dark .chip { background:rgba(255,255,255,0.07); }
+    .chip.active { background:#92610a; color:#fff8e6; }
+    body.dark .chip.active { background:#c28a1a; color:#1a1204; }
+    .settings-row-btn {
+      width:100%; text-align:left; padding:11px 12px; border-radius:12px; border:none;
+      background:rgba(120,80,0,0.06); font-size:0.86rem; font-weight:600; color:inherit;
+      cursor:pointer; margin-top:8px;
+    }
+    body.dark .settings-row-btn { background:rgba(255,255,255,0.06); }
+    .settings-close { background:none; border:none; font-size:1.3rem; cursor:pointer; color:inherit; line-height:1; opacity:0.5; }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+
+    <div class="topbar">
+      <button class="icon-btn" @click="showSettings = true" title="Pengaturan">⚙️</button>
+      <button class="icon-btn" @click="toggleTheme" title="Ganti tema">{{ theme === 'light' ? '🌙' : '☀️' }}</button>
+    </div>
+
+    <!-- PWA Install Banner -->
+    <div v-if="pwaInstallPrompt"
+      style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;
+             background:#fff7e0;border:2px solid #c28a1a;border-radius:16px;
+             padding:14px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.18);
+             display:flex;align-items:center;gap:12px;max-width:340px;width:90%">
+      <span style="font-size:1.6rem">🔤</span>
+      <div style="flex:1">
+        <div style="font-weight:700;color:#5c3d0a;font-size:0.85rem">Install Kuis Kosakata</div>
+        <div style="font-size:0.72rem;color:#9a7030;margin-top:2px">Buka langsung dari homescreen, tanpa buka browser</div>
+      </div>
+      <button @click="pwaDoInstall()"
+        style="background:linear-gradient(135deg,#92610a,#c28a1a);color:#fff7e0;border:none;
+               border-radius:8px;padding:7px 14px;font-size:0.78rem;font-weight:700;cursor:pointer">
+        Install
+      </button>
+      <button @click="pwaInstallPrompt=null"
+        style="background:none;border:none;color:#9a7030;font-size:1.2rem;cursor:pointer;padding:4px;line-height:1">✕</button>
+    </div>
+
+    <!-- ===== EMPTY STATE ===== -->
+    <div v-if="!currentWord" class="flash-wrap" @click="showSettings = true">
+      <div class="empty-icon">📖</div>
+      <div class="empty-title">Kamus masih kosong</div>
+      <div class="empty-sub">Simpan kata dulu lewat "Simpan ke kamus" di BacaKitab, atau ketuk ⚙️ untuk muat data contoh.</div>
+    </div>
+
+    <!-- ===== KARTU KATA ===== -->
+    <div v-else class="flash-wrap" @click="isFlipped = !isFlipped">
+      <template v-if="!isFlipped">
+        <div class="flash-arab">{{ currentWord.arab || currentWord.noHarokat }}</div>
+        <div class="flash-hint">Ketuk untuk lihat arti</div>
+      </template>
+      <template v-else>
+        <div class="flash-back">
+          <div class="flash-arab" style="font-size:2.2rem">{{ currentWord.arab || currentWord.noHarokat }}</div>
+          <div class="flash-latin" v-if="currentWord.latin">{{ currentWord.latin }}</div>
+          <div class="flash-divider"></div>
+          <div class="flash-arti">{{ currentWord.arti || '—' }}</div>
+          <div class="flash-kedudukan" v-if="currentWord.kedudukan">{{ currentWord.kedudukan }}</div>
+        </div>
+      </template>
+      <button v-if="!isFlipped" class="flash-shuffle" @click.stop="pickWord">🔀 Kata lain</button>
+    </div>
+
+    <!-- Bar aksi mengambang: selalu tampil selama ada kata (sesuai desainmu) -->
+    <div v-if="currentWord" class="flash-actions" @click.stop>
+      <button class="flash-mini-btn flash-sulit" @click="markResult('sulit')">😅 Sulit</button>
+      <button class="flash-mini-btn" @click="playAudio(currentWord)">🔊 Dengar</button>
+      <button class="flash-mini-btn flash-hafal" @click="markResult('hafal')">😊 Hafal</button>
+    </div>
+
+    <!-- ===== MODAL PENGATURAN ===== -->
+    <div v-if="showSettings" class="settings-backdrop" @click.self="showSettings = false">
+      <div class="settings-panel">
+        <div class="settings-title">
+          <span>⚙️ Pengaturan</span>
+          <button class="settings-close" @click="showSettings = false">×</button>
+        </div>
+        <div style="font-size:0.8rem;opacity:0.6;">{{ allWords.length }} kata di kamus</div>
+
+        <div class="settings-label">URUTAN PENGAMBILAN KATA</div>
+        <div class="chip-row">
+          <div class="chip" :class="{active: wordOrder === 'acak'}" @click="wordOrder='acak'">🔀 Acak</div>
+          <div class="chip" :class="{active: wordOrder === 'sulit'}" @click="wordOrder='sulit'">🔥 Prioritas Sulit</div>
+          <div class="chip" :class="{active: wordOrder === 'terbaru'}" @click="wordOrder='terbaru'">🕒 Terbaru Dulu</div>
+        </div>
+
+        <div class="settings-label">LAINNYA</div>
+        <button v-if="pwaInstallPrompt" class="settings-row-btn" @click="pwaDoInstall">📲 Install App ke Homescreen</button>
+        <button class="settings-row-btn" @click="goHome">📚 Buka BacaKitab (app lengkap)</button>
+        <!-- Tombol data contoh cuma tampil kalau kamus BENAR-BENAR kosong, biar tidak menimpa data asli -->
+        <button v-if="allWords.length === 0" class="settings-row-btn" @click="loadDummyData">🎲 Muat Data Contoh</button>
+        <button v-if="allWords.length > 0" class="settings-row-btn" @click="clearDictionary" style="color:#b8590a;">🗑️ Kosongkan Kamus</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Daftarkan Service Worker yang sama dengan BacaKitab — WAJIB ada supaya
+    // halaman ini dianggap "installable" oleh Chrome (syarat beforeinstallprompt).
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/bacaKitab/sw.js', { scope: '/bacaKitab/' })
+          .catch(err => console.warn('[SW] Gagal daftar:', err));
+      });
+    }
+
+    new Vue({
+      el: '#app',
+      data: {
+        theme: localStorage.getItem('theme') || 'light',
+        allWords: [],
+        currentWord: null,
+        isFlipped: false,
+        showSettings: false,
+        wordOrder: localStorage.getItem('flashcardOrder') || 'acak', // acak | sulit | terbaru
+        pwaInstallPrompt: null,
+      },
+      watch: {
+        theme(v) {
+          document.body.className = v;
+          try { localStorage.setItem('theme', v); } catch(e) {}
+        },
+        wordOrder(v) {
+          try { localStorage.setItem('flashcardOrder', v); } catch(e) {}
+          this.pickWord();
+        },
+      },
+      mounted() {
+        document.body.className = this.theme;
+        this.loadDictionary();
+        this.pickWord();
+
+        window.addEventListener('beforeinstallprompt', e => {
+          e.preventDefault();
+          this.pwaInstallPrompt = e;
+        });
+        window.addEventListener('appinstalled', () => {
+          this.pwaInstallPrompt = null;
+        });
+      },
+      methods: {
+        pwaDoInstall() {
+          if (!this.pwaInstallPrompt) return;
+          this.pwaInstallPrompt.prompt();
+          this.pwaInstallPrompt.userChoice.then(() => {
+            this.pwaInstallPrompt = null;
+          });
+        },
+        loadDictionary() {
+          try {
+            this.allWords = JSON.parse(localStorage.getItem('myDictionary') || '[]');
+          } catch(e) {
+            this.allWords = [];
+          }
+        },
+        toggleTheme() {
+          this.theme = this.theme === 'light' ? 'dark' : 'light';
+        },
+        goHome() {
+          try { window.speechSynthesis.cancel(); } catch(e) {}
+          window.location.href = 'https://nu2883.github.io/bacaKitab/';
+        },
+
+        // Pilih satu kata sesuai mode urutan yang aktif
+        pickWord() {
+          try { window.speechSynthesis.cancel(); } catch(e) {}
+          this.isFlipped = false;
+          if (!this.allWords.length) { this.currentWord = null; return; }
+
+          if (this.wordOrder === 'terbaru') {
+            const sorted = this.allWords.slice().sort((a, b) => (b.timestamp||0) - (a.timestamp||0));
+            const pool = sorted.slice(0, Math.max(5, Math.ceil(sorted.length * 0.3)));
+            this.currentWord = pool[Math.floor(Math.random() * pool.length)];
+          } else if (this.wordOrder === 'sulit') {
+            const weights = this.allWords.map(w => (w.wrongCount || 0) + 1);
+            const total = weights.reduce((a, b) => a + b, 0);
+            let r = Math.random() * total;
+            let chosen = this.allWords[0];
+            for (let i = 0; i < this.allWords.length; i++) {
+              r -= weights[i];
+              if (r <= 0) { chosen = this.allWords[i]; break; }
+            }
+            this.currentWord = chosen;
+          } else {
+            this.currentWord = this.allWords[Math.floor(Math.random() * this.allWords.length)];
+          }
+        },
+
+        markResult(type) {
+          const item = this.currentWord;
+          if (!item) return;
+
+          if (type === 'hafal') item.correctCount = (item.correctCount || 0) + 1;
+          else                  item.wrongCount   = (item.wrongCount   || 0) + 1;
+
+          const idx = this.allWords.findIndex(d => d.timestamp === item.timestamp);
+          if (idx !== -1) {
+            this.allWords[idx] = { ...this.allWords[idx], ...item };
+            try { localStorage.setItem('myDictionary', JSON.stringify(this.allWords)); } catch(e) {}
+          }
+
+          this.isFlipped = false;
+          setTimeout(() => { this.pickWord(); }, 150);
+        },
+
+        playAudio(item) {
+          if (!item || (!item.arab && !item.noHarokat)) return;
+          try { window.speechSynthesis.cancel(); } catch(e) {}
+          const text = item.arab || item.noHarokat;
+          const u = new SpeechSynthesisUtterance(text);
+          const voices = window.speechSynthesis.getVoices();
+          const idVoice = voices.find(v => v.lang === 'id-ID') || voices.find(v => v.lang && v.lang.startsWith('id'));
+          u.lang = idVoice ? idVoice.lang : 'id-ID';
+          if (idVoice) u.voice = idVoice;
+          u.rate = 0.85;
+          window.speechSynthesis.speak(u);
+        },
+
+        // Hanya dipanggil manual dari tombol, dan tombolnya sendiri cuma muncul
+        // kalau allWords.length === 0 — jadi tidak akan pernah menimpa data asli.
+        loadDummyData() {
+          if (this.allWords.length > 0) return; // pengaman tambahan
+          const now = Date.now();
+          const dummy = [
+            { arab:'بِسْمِ',      noHarokat:'بسم',      arti:'Dengan nama',        kedudukan:"Jar Majrur — Mudhaf",                         latin:'bismi',      harakatSalah1:'بِسْمَ',      harakatSalah2:'بِسْمُ',      wrongCount:3, correctCount:1 },
+            { arab:'اللَّهِ',      noHarokat:'الله',     arti:'Allah',              kedudukan:"Mudhaf Ilaih — Majrur",                       latin:'Allaahi',    harakatSalah1:'اللَّهَ',      harakatSalah2:'اللَّهُ',      wrongCount:0, correctCount:5 },
+            { arab:'الرَّحْمَٰنِ',   noHarokat:'الرحمن',   arti:'Yang Maha Pengasih', kedudukan:"Na'at (sifat) — Majrur",                      latin:'ar-Rahmaani',harakatSalah1:'الرَّحْمَٰنَ',   harakatSalah2:'الرَّحْمَٰنُ',   wrongCount:1, correctCount:2 },
+            { arab:'تَفْسِيْرُ',    noHarokat:'تفسير',    arti:'Tafsir / Penjelasan',kedudukan:"Mubtada' - Marfu' - Mudhaf",                  latin:'tafsiiru',   harakatSalah1:'تَفْسِيْرَ',    harakatSalah2:'تَفْسِيْرِ',    wrongCount:4, correctCount:0 },
+            { arab:'سُوْرَةِ',     noHarokat:'سورة',     arti:'Surah',              kedudukan:"Mudhaf Ilaih - Majrur",                       latin:'suurati',    harakatSalah1:'سُوْرَةُ',     harakatSalah2:'سُوْرَةَ',     wrongCount:2, correctCount:3 },
+            { arab:'الْحَمْدُ',     noHarokat:'الحمد',    arti:'Segala puji',        kedudukan:"Mubtada' - Marfu'",                           latin:'al-hamdu',   harakatSalah1:'الْحَمْدَ',     harakatSalah2:'الْحَمْدِ',     wrongCount:0, correctCount:4 },
+            { arab:'رَبِّ',        noHarokat:'رب',       arti:'Tuhan/Pemelihara',   kedudukan:"Mudhaf Ilaih - Majrur",                       latin:'rabbi',      harakatSalah1:'رَبَّ',        harakatSalah2:'رَبُّ',        wrongCount:5, correctCount:1 },
+            { arab:'الْعَالَمِيْنَ',  noHarokat:'العالمين', arti:'Semesta alam',       kedudukan:"Mudhaf Ilaih - Majrur - jamak mudzakkar salim",latin:'al-\'aalamiina',harakatSalah1:'الْعَالَمِيْنِ', harakatSalah2:'الْعَالَمُوْنَ', wrongCount:1, correctCount:2 },
+            { arab:'مَالِكِ',      noHarokat:'مالك',     arti:'Yang Menguasai',     kedudukan:"Na'at (sifat) — Majrur",                      latin:'maaliki',    harakatSalah1:'مَالِكَ',      harakatSalah2:'مَالِكُ',      wrongCount:0, correctCount:1 },
+            { arab:'يَوْمِ',       noHarokat:'يوم',      arti:'Hari',               kedudukan:"Mudhaf Ilaih - Majrur",                       latin:'yawmi',      harakatSalah1:'يَوْمَ',       harakatSalah2:'يَوْمُ',       wrongCount:2, correctCount:0 },
+            { arab:'الدِّيْنِ',     noHarokat:'الدين',    arti:'Pembalasan/Agama',   kedudukan:"Mudhaf Ilaih - Majrur",                       latin:'ad-diini',   harakatSalah1:'الدِّيْنَ',     harakatSalah2:'الدِّيْنُ',     wrongCount:3, correctCount:2 },
+            { arab:'نَعْبُدُ',      noHarokat:'نعبد',     arti:'Kami menyembah',     kedudukan:"Fi'il Mudhari' - Marfu' - Fa'il dhamir kami", latin:'na\'budu',   harakatSalah1:'نَعْبُدَ',      harakatSalah2:'نَعْبُدِ',      wrongCount:0, correctCount:3 },
+            { arab:'نَسْتَعِيْنُ',   noHarokat:'نستعين',   arti:'Kami memohon pertolongan',kedudukan:"Fi'il Mudhari' - Marfu'",                latin:'nasta\'iinu',harakatSalah1:'نَسْتَعِيْنَ',   harakatSalah2:'نَسْتَعِيْنِ',   wrongCount:1, correctCount:1 },
+          ];
+          const arr = dummy.map((d, i) => ({
+            no: i + 1, ...d, timestamp: now - (dummy.length - i) * 3600000
+          }));
+          try { localStorage.setItem('myDictionary', JSON.stringify(arr)); } catch(e) {}
+          this.loadDictionary();
+          this.pickWord();
+          this.showSettings = false;
+        },
+        clearDictionary() {
+          if (!confirm('Hapus semua kata di kamus? Ini juga akan mempengaruhi data di BacaKitab.')) return;
+          try { localStorage.setItem('myDictionary', '[]'); } catch(e) {}
+          this.loadDictionary();
+          this.pickWord();
+        },
+      }
+    });
+  </script>
+</body>
+</html>
