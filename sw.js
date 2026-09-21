@@ -1,19 +1,26 @@
-const CACHE_NAME = 'kuiskosakata-v1';
+const CACHE_NAME = 'kuiskosakata-v2';
 const SCOPE = '/kosakata/';
 
 const PRECACHE_URLS = [
   '/kosakata/',
   '/kosakata/index.html',
   '/kosakata/kuisKosakata.html',
-  '/kosakata/manifest.json',
-
-  'https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&display=swap',
+  // Pastikan nama file ini SAMA PERSIS dengan yang ada di GitHub Anda (manifest-kuis.json atau manifest.json)
+  '/kosakata/manifest-kuis.json',
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE_URLS))
+      .then(cache => {
+        // Menggunakan cache.add satu per satu agar jika salah satu gagal (misal 404), 
+        // tidak membuat seluruh proses install Service Worker batak total.
+        return Promise.all(
+          PRECACHE_URLS.map(url => 
+            cache.add(url).catch(err => console.warn('Gagal precache:', url, err))
+          )
+        );
+      })
       .then(() => self.skipWaiting())
   );
 });
