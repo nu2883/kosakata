@@ -208,11 +208,11 @@
   </div>
 
   <script>
-    // Daftarkan Service Worker yang sama dengan BacaKitab — WAJIB ada supaya
+    // Daftarkan Service Worker milik /kosakata/ sendiri — WAJIB ada supaya
     // halaman ini dianggap "installable" oleh Chrome (syarat beforeinstallprompt).
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/bacaKitab/sw.js', { scope: '/bacaKitab/' })
+        navigator.serviceWorker.register('/kosakata/sw.js', { scope: '/kosakata/' })
           .catch(err => console.warn('[SW] Gagal daftar:', err));
       });
     }
