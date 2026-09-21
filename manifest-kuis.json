@@ -1,0 +1,27 @@
+{
+  "name": "Kuis Kosakata Arab",
+  "short_name": "Kuis Kosakata",
+  "description": "Flashcard kosakata Arab — kartu kata acak dari kamus BacaKitab",
+  "id": "/bacaKitab/kuiskosakata-app-v2",
+  "start_url": "/bacaKitab/kuisKosakata.html",
+  "scope": "/bacaKitab/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4e2a3",
+  "theme_color": "#92610a",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/bacaKitab/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/bacaKitab/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
