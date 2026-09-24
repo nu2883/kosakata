@@ -156,10 +156,13 @@
     </div>
 
     <!-- ===== KARTU KATA ===== -->
-    <div v-else class="flash-wrap" @click="isFlipped = !isFlipped">
+    <div v-else class="flash-wrap"
+      @click="onCardClick"
+      @touchstart="onTouchStart"
+      @touchend="onTouchEnd">
       <template v-if="!isFlipped">
         <div class="flash-arab">{{ currentWord.arab || currentWord.noHarokat }}</div>
-        <div class="flash-hint">Ketuk untuk lihat arti</div>
+        <div class="flash-hint">Ketuk untuk lihat arti · Geser untuk ganti kata</div>
       </template>
       <template v-else>
         <div class="flash-back">
@@ -170,7 +173,7 @@
           <div class="flash-kedudukan" v-if="currentWord.kedudukan">{{ currentWord.kedudukan }}</div>
         </div>
       </template>
-      <button v-if="!isFlipped" class="flash-shuffle" @click.stop="pickWord">🔀 Kata lain</button>
+      <button v-if="!isFlipped" class="flash-shuffle" @click.stop="goNext">🔀 Kata lain</button>
     </div>
 
     <!-- Bar aksi mengambang: selalu tampil selama ada kata (sesuai desainmu) -->
@@ -227,6 +230,13 @@
         showSettings: false,
         wordOrder: localStorage.getItem('flashcardOrder') || 'acak', // acak | sulit | terbaru
         pwaInstallPrompt: null,
+
+        // Navigasi swipe ala TikTok
+        history: [],        // riwayat kata yang sudah dilihat sesi ini
+        historyIndex: -1,   // posisi sekarang di dalam history
+        touchStartX: 0,
+        touchStartY: 0,
+        isSwipeHandled: false,
       },
       watch: {
         theme(v) {
@@ -318,6 +328,56 @@
 
           this.currentWord = chosen;
           try { localStorage.setItem('lastWordTimestamp', String(chosen.timestamp)); } catch(e) {}
+
+          // Catat ke history untuk navigasi swipe (batasi 50 entri biar tidak membengkak)
+          this.history.push(chosen);
+          if (this.history.length > 50) this.history.shift();
+          this.historyIndex = this.history.length - 1;
+        },
+
+        // Tampilkan kata pada posisi tertentu di history (dipakai navigasi swipe)
+        showWordAt(index) {
+          if (index < 0 || index >= this.history.length) return;
+          try { window.speechSynthesis.cancel(); } catch(e) {}
+          this.historyIndex = index;
+          this.currentWord = this.history[index];
+          this.isFlipped = false;
+          try { localStorage.setItem('lastWordTimestamp', String(this.currentWord.timestamp)); } catch(e) {}
+        },
+
+        // Swipe ke atas / tombol "Kata lain": maju ke kata berikutnya.
+        // Kalau sedang di tengah history (habis swipe turun), maju ke arah history dulu; kalau sudah di ujung, ambil kata baru.
+        goNext() {
+          if (this.historyIndex < this.history.length - 1) {
+            this.showWordAt(this.historyIndex + 1);
+          } else {
+            this.pickWord();
+          }
+        },
+        // Swipe ke bawah: balik ke kata sebelumnya yang sudah dilihat
+        goPrev() {
+          if (this.historyIndex > 0) this.showWordAt(this.historyIndex - 1);
+        },
+
+        onCardClick() {
+          if (this.isSwipeHandled) { this.isSwipeHandled = false; return; }
+          this.isFlipped = !this.isFlipped;
+        },
+        onTouchStart(e) {
+          this.touchStartX = e.touches[0].clientX;
+          this.touchStartY = e.touches[0].clientY;
+        },
+        onTouchEnd(e) {
+          const dx = e.changedTouches[0].clientX - this.touchStartX;
+          const dy = e.changedTouches[0].clientY - this.touchStartY;
+          const THRESHOLD = 50;
+          if (Math.abs(dy) > THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+            this.isSwipeHandled = true;
+            if (dy < 0) this.goNext();  // geser ke atas → kata berikutnya
+            else        this.goPrev();  // geser ke bawah → kata sebelumnya
+          } else {
+            this.isSwipeHandled = false;
+          }
         },
 
         markResult(type) {
